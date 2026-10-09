@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Wrapper for git worktree scripts.
+# Usage: dev worktree up <branch-name>
+#        dev worktree down <branch-name>
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+case "${1:-}" in
+  init)
+    shift
+    exec "$SCRIPT_DIR/dev-worktree-init.sh" "$@"
+    ;;
+  up)
+    shift
+    exec "$SCRIPT_DIR/dev-worktree-up.sh" "$@"
+    ;;
+  down)
+    shift
+    exec "$SCRIPT_DIR/dev-worktree-down.sh" "$@"
+    ;;
+  env)
+    shift
+    exec "$SCRIPT_DIR/dev-worktree-env.sh" "$@"
+    ;;
+  port)
+    shift
+    exec "$SCRIPT_DIR/dev-worktree-port.sh" "$@"
+    ;;
+  info)
+    shift
+    exec "$SCRIPT_DIR/dev-worktree-info.sh" "$@"
+    ;;
+  *)
+    echo "Usage: dev wt <command> [args]" >&2
+    echo "" >&2
+    echo "Commands:" >&2
+    echo "  init           Bootstrap first worktree from a bare clone" >&2
+    echo "  up <branch>    Create a git worktree with Docker isolation" >&2
+    echo "  down <branch>  Tear down a git worktree and free the port" >&2
+    echo "  env            Set up .env.local for current worktree" >&2
+    echo "  port           Write docker-compose.override.yml from the port registry" >&2
+    echo "  info           Show info about the current worktree" >&2
+    exit 1
+    ;;
+esac
