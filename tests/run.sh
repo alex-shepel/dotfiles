@@ -95,13 +95,6 @@ for cmd in git supabase docker jq psql rsync curl; do
   command -v "$cmd" >/dev/null || { echo "Error: $cmd is required but not found."; exit 1; }
   printf "  ${GREEN}✓${RESET} %s\n" "$cmd"
 done
-# pgflow: required for e2e test 04-db-flow-lifecycle. Install via ./install.sh
-# (which handles node + `npm install -g pgflow`).
-if ! command -v pgflow >/dev/null && ! npx -y pgflow --version >/dev/null 2>&1; then
-  echo "Error: pgflow is required but not found. Run ./install.sh from the repo root."
-  exit 1
-fi
-printf "  ${GREEN}✓${RESET} pgflow\n"
 printf "  ${GREEN}✓${RESET} all scripts found\n"
 
 # ── Setup bare repo fixture ─────────────────────────────────────────
@@ -119,7 +112,7 @@ git init -q -b main
 git config user.email "test@test.com"
 git config user.name "Test"
 
-mkdir -p supabase/migrations/app supabase/migrations/jobs supabase/seeds supabase/flows supabase/functions/pgflow src/lib src/types
+mkdir -p supabase/migrations/app supabase/migrations/jobs supabase/seeds supabase/functions/hello src/lib src/types
 
 cat > supabase/config.toml << 'TOML'
 project_id = "test-int"
@@ -167,38 +160,9 @@ CREATE TABLE IF NOT EXISTS public._test_init (
 );
 SQL
 
-# Minimal noop flow for `dev sb flow` end-to-end tests. The ControlPlane
-# (edge runtime) resolves @pgflow/dsl via Deno's npm resolver, per deno.json.
-cat > supabase/flows/noop.ts << 'TS'
-import { Flow } from "@pgflow/dsl";
-
-export const Noop = new Flow<{ value: string }>({
-  slug: "noop",
-}).step({ slug: "doNothing" }, (input) => ({ ok: true, value: input.run.value }));
-TS
-
-cat > supabase/flows/index.ts << 'TS'
-export { Noop } from "./noop.ts";
-TS
-
-cat > supabase/functions/pgflow/deno.json << 'JSON'
-{
-  "imports": {
-    "@pgflow/core": "npm:@pgflow/core@0.14.1",
-    "@pgflow/core/": "npm:@pgflow/core@0.14.1/",
-    "@pgflow/dsl": "npm:@pgflow/dsl@0.14.1",
-    "@pgflow/dsl/": "npm:@pgflow/dsl@0.14.1/",
-    "@pgflow/edge-worker": "jsr:@pgflow/edge-worker@0.14.1",
-    "@pgflow/edge-worker/": "jsr:@pgflow/edge-worker@0.14.1/"
-  }
-}
-JSON
-
-cat > supabase/functions/pgflow/index.ts << 'TS'
-import { ControlPlane } from "@pgflow/edge-worker";
-import * as flows from "../../flows/index.ts";
-
-ControlPlane.serve(flows);
+# Minimal edge function so the edge runtime has something to serve.
+cat > supabase/functions/hello/index.ts << 'TS'
+Deno.serve(() => new Response("ok"));
 TS
 
 cat > docker-compose.yml << 'YAML'

@@ -14,9 +14,8 @@ Team configuration files for local development.
 | [ripgrep](https://github.com/BurntSushi/ripgrep)             | Fast recursive code search, used by Neovim's Telescope        |
 | [TPM](https://github.com/tmux-plugins/tpm)                   | Tmux Plugin Manager, auto-installs tmux plugins               |
 | [Supabase CLI](https://supabase.com/docs/guides/cli)         | Local Supabase stack, required by `dev sb`                    |
-| [Node.js](https://nodejs.org/)                               | Runtime for `pgflow`                                          |
+| [Node.js](https://nodejs.org/)                               | JavaScript runtime for `dev env push` and Corepack            |
 | [Corepack](https://github.com/nodejs/corepack)               | Provides pnpm/yarn shims pinned per-project (ships with Node) |
-| [pgflow](https://pgflow.dev/)                                | Flow compiler, required by `dev sb flow`                      |
 
 ## Structure
 
@@ -50,7 +49,6 @@ dotfiles/
 │   ├── dev-supabase-migrate.sh
 │   ├── dev-supabase-seed.sh
 │   ├── dev-supabase-reset.sh
-│   ├── dev-supabase-flow.sh
 │   ├── dev-supabase-anchor.sh
 │   ├── dev-env.sh                # Env-vars dispatcher
 │   ├── dev-env-add.sh
@@ -116,7 +114,6 @@ All commands operate on the shared supabase worktree regardless of which worktre
 | `dev sb migrate`        | Apply pending migrations in the shared worktree                                                                                          |
 | `dev sb seed`           | Apply pending seeds from `supabase/seeds/` (skips `users.sql`; tracked in `supabase_seeds.applied_seeds` — rename a seed to re-apply it) |
 | `dev sb reset`          | Full local reset: `db reset` → apply migrations → seed `users.sql` → apply seeds → background `functions serve`                          |
-| `dev sb flow [slug]`    | Compile pgflow flows from the invoking worktree and apply against the shared stack.                                                      |
 | `dev sb anchor`         | Point edge runtime's `COPYMIND_API_HOST` at this worktree's port                                                                         |
 
 ### `dev wt` — Worktree
@@ -267,7 +264,7 @@ weekly usage windows is gone.
 ./test.sh link               # pattern filter
 ```
 
-Requires everything `install.sh` sets up (`supabase`, `jq`, `pgflow`, `node`, …) plus `psql`, `rsync`, `curl`, `docker`. Run `./install.sh` before the first test run.
+Requires everything `install.sh` sets up (`supabase`, `jq`, `node`, …) plus `psql`, `rsync`, `curl`, `docker`. Run `./install.sh` before the first test run.
 
 ## Installation
 

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Manage shared local Supabase instance (one per repo, shared across worktrees).
-# Usage: dev supabase <up|down|status|link|unlink|sync|migrate|seed|reset|flow|anchor>
+# Usage: dev supabase <up|down|status|link|unlink|sync|migrate|seed|reset|anchor>
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -43,16 +43,12 @@ case "${1:-}" in
     shift
     exec "$SCRIPT_DIR/dev-supabase-reset.sh" "$@"
     ;;
-  flow)
-    shift
-    exec "$SCRIPT_DIR/dev-supabase-flow.sh" "$@"
-    ;;
   anchor)
     shift
     exec "$SCRIPT_DIR/dev-supabase-anchor.sh" "$@"
     ;;
   *)
-    echo "Usage: dev supabase <up|down|status|link|unlink|sync|migrate|seed|reset|flow|anchor>" >&2
+    echo "Usage: dev supabase <up|down|status|link|unlink|sync|migrate|seed|reset|anchor>" >&2
     echo "" >&2
     echo "Commands:" >&2
     echo "  up              Create supabase worktree and start Supabase" >&2
@@ -65,7 +61,6 @@ case "${1:-}" in
     echo "  migrate         Apply pending migrations in the shared worktree" >&2
     echo "  seed            Apply pending seeds (skips users.sql)" >&2
     echo "  reset           Full reset: db reset + migrate + seeds + functions serve" >&2
-    echo "  flow [slug]     Compile + apply pgflow flows from invoking worktree" >&2
     echo "  anchor          Point edge runtime's COPYMIND_API_HOST at this worktree's port" >&2
     exit 1
     ;;

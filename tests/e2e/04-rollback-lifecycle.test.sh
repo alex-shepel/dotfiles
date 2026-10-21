@@ -8,10 +8,6 @@ printf "${BOLD}E2E: Rollback lifecycle${RESET}\n"
 # Entry state (left by 03-db-reset): main + supabase worktrees exist,
 # Supabase running. This test creates its own feature worktree so it is
 # independent of the worktrees earlier e2e tests tore down.
-#
-# MUST run before 05-db-flow-lifecycle: that test merges a pgflow
-# migration to origin/main that is never applied (the fixture DB has no
-# pgflow schema), which poisons every later `supabase migration up`.
 
 db_table_missing() {
   local count
@@ -123,12 +119,5 @@ assert "orphan2 wiped by reset" db_table_missing "rb_orphan2"
 assert "history row removed" db_version_not_exists "20260601000004"
 assert "baseline migration reapplied" db_version_exists "20260101000000"
 rm "$WORKTREE_BASE/main/supabase/migrations/app/20260601000004_rb_orphan2.sql"
-
-# Leave the stack quiescent for 05-db-flow-lifecycle: the reset above
-# spawned a fresh `supabase functions serve` seconds ago, and a process
-# still initializing can recreate its edge-runtime container mid-way
-# through 05's immediate `supabase stop` + `supabase start` dance.
-pkill -f 'supabase functions serve' 2>/dev/null || true
-sleep 2
 
 print_results

@@ -102,14 +102,6 @@ else
   ok "Supabase CLI already installed"
 fi
 
-# --- pgflow (required by `dev sb flow`) ---
-if ! command -v pgflow &>/dev/null; then
-  info "Installing pgflow globally..."
-  npm install -g pgflow
-else
-  ok "pgflow already installed"
-fi
-
 # --- Ghostty ---
 # A cask, not a formula, so it can't join the package loop above. Gated on the
 # app bundle rather than `command -v ghostty`: the CLI binary lives inside the

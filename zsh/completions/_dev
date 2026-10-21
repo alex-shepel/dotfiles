@@ -147,7 +147,6 @@ _dev_supabase() {
     'migrate:Apply pending migrations in the shared worktree'
     'seed:Apply pending seeds from supabase/seeds/'
     'reset:Full local reset — db reset, migrate, seed, serve functions'
-    'flow:Compile pgflow flows and apply them against the shared stack'
     'anchor:Point the edge runtime'\''s COPYMIND_API_HOST at this worktree'\''s port'
   )
   if (( CURRENT == 3 )); then
@@ -158,7 +157,6 @@ _dev_supabase() {
     down)   _values 'flag' '--force[skip the confirmation prompt]' ;;
     sync)   _values 'flag' '--reset[reset the database after syncing]' ;;
     unlink) _values 'flag' '--reset[reset the database instead of applying rollbacks]' ;;
-    flow)   _message -e slug 'flow slug (default: all)' ;;
   esac
 }
 

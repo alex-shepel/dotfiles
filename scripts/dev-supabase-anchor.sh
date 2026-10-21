@@ -8,7 +8,7 @@ set -euo pipefail
 # into the container's config). When workers post back to the app
 # (/api/job, /api/chat/...) they use that baked-in URL — so if the shared
 # Supabase stack was started against a different worktree's port, every
-# pgflow worker call ECONNREFUSEs against the wrong host port.
+# edge function call back to the app ECONNREFUSEs against the wrong host port.
 #
 # This script:
 #   1. Reads the invoking worktree's port from .worktree-ports.
@@ -86,14 +86,9 @@ else
     supabase start >/dev/null
   )
   # `supabase stop` orphans the host-side `supabase functions serve`
-  # process and the ControlPlane endpoint depends on it, so respawn.
+  # process, so respawn it.
   ensure_functions_serve "$SHARED_WT"
-
-  API_PORT="$(get_api_port "$SHARED_WT")"
-  wait_for_control_plane "$API_PORT" || {
-    echo "Warning: ControlPlane did not come up within timeout — workers may need a moment." >&2
-  }
 fi
 
 echo ""
-echo "Done. pgflow workers will now post to $NEW_VALUE."
+echo "Done. Edge functions will now post to $NEW_VALUE."

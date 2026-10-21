@@ -31,15 +31,6 @@ exit 0
 STUB
 chmod +x "$STUB_BIN/supabase"
 
-# wait_for_control_plane curl-checks the ControlPlane edge function. In the
-# unit test there is no real edge runtime, so stub curl to always succeed —
-# otherwise the script would hang on the 30-iteration polling loop.
-cat > "$STUB_BIN/curl" <<'STUB'
-#!/usr/bin/env bash
-exit 0
-STUB
-chmod +x "$STUB_BIN/curl"
-
 cat > "$STUB_BIN/docker" <<'STUB'
 #!/usr/bin/env bash
 exit 0

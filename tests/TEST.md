@@ -4,7 +4,7 @@ Three-layer test suite against a real bare repo + Supabase container.
 
 ## Prerequisites
 
-- Run `./install.sh` from the repo root to install `supabase`, `jq`, `pgflow`, `node`, etc.
+- Run `./install.sh` from the repo root to install `supabase`, `jq`, `node`, etc.
 - Plus `psql`, `rsync`, `curl`, `docker`
 - Docker daemon running
 
@@ -62,4 +62,3 @@ Multi-command developer workflows.
 | `02-db-migrate-seed`     | `dev sb migrate` + `dev sb seed` — no-op, new file, idempotence, users.sql skip, rename-as-new                                                                              |
 | `03-db-reset`            | `dev sb reset` — wipe + re-migrate + re-seed, functions serve backgrounded, feature-worktree scope                                                                          |
 | `04-rollback-lifecycle`  | link lint → unlink reverts via `supabase/rollbacks/` (newest-first) → phantom warning for uncovered → `dev wt down` rollback path → `unlink --reset`                        |
-| `05-db-flow-lifecycle`   | `dev sb flow` released-flow guard fires (even when the stack was booted from a feature worktree); leaves an unapplied pgflow migration on origin/main, so it must stay LAST |

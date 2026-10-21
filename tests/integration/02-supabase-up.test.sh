@@ -19,8 +19,7 @@ ORIGIN_MAIN=$(cd "$TEST_DIR/repo.git" && git rev-parse origin/main)
 assert_eq "detached at origin/main" "$ORIGIN_MAIN" "$SUPABASE_HEAD"
 
 # ── Edge runtime available after dev sb up ───────────────────────────
-# pgflow's ensure_workers cron needs the edge runtime container up to
-# dispatch flow tasks. Previously `dev sb up` would leave the shared
+# Edge functions need the edge runtime container up. Previously `dev sb up` would leave the shared
 # worktree in a state where the container was missing on platforms
 # where `supabase start` doesn't auto-spawn it (e.g. macOS Docker
 # Desktop with certain edge_runtime policies). On Linux CI runners

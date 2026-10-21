@@ -484,30 +484,8 @@ CREATE TABLE IF NOT EXISTS supabase_seeds.applied_seeds (
 
 # --- Edge runtime helpers ---
 
-# Poll the pgflow ControlPlane endpoint until it responds or times out.
-# Used by dev-supabase-flow.sh after restarting the stack.
-wait_for_control_plane() {
-  local port="${1:-54321}"
-  local url="http://127.0.0.1:${port}/functions/v1/pgflow"
-  echo -n "Waiting for ControlPlane"
-  local i
-  for i in $(seq 1 30); do
-    if curl -s --max-time 2 "$url" >/dev/null 2>&1; then
-      echo " ready!"
-      return 0
-    fi
-    if [ "$i" -eq 30 ]; then
-      echo " TIMEOUT"
-      echo "Error: ControlPlane did not respond within 30 seconds" >&2
-      return 1
-    fi
-    echo -n "."
-    sleep 1
-  done
-}
-
 # Spawn `supabase functions serve` in the background, detached from this
-# shell. Internal helper — callers use ensure_functions_serve / reload_edge_runtime.
+# shell. Internal helper — callers use ensure_functions_serve.
 _spawn_functions_serve() {
   local supabase_wt="$1"
   (cd "$supabase_wt" && supabase functions serve) </dev/null >/dev/null 2>&1 &
@@ -546,27 +524,6 @@ ensure_functions_serve() {
   _spawn_functions_serve "$supabase_wt"
 }
 
-# Force-reload the edge runtime so Deno drops its module cache for any
-# previously-imported flow source. Required by `dev sb flow` AFTER rsyncing
-# new flow source into the shared worktree: without this, pgflow's
-# ControlPlane returns WorkerAlreadyRetired / WORKER_ERROR because it has
-# cached the old flow module and refuses to recompile the changed one.
-# `supabase functions serve`'s own file-watch hot-reload is NOT sufficient
-# for transitively-imported flow files — only a container restart drops
-# the import cache.
-reload_edge_runtime() {
-  local supabase_wt="$1"
-  local project_id
-  project_id="$(get_project_id "$supabase_wt")"
-  local api_port
-  api_port="$(get_api_port "$supabase_wt")"
-  echo "==> Reloading edge runtime (supabase_edge_runtime_${project_id})"
-  pkill -f 'supabase functions serve' 2>/dev/null || true
-  docker restart "supabase_edge_runtime_${project_id}" >/dev/null 2>&1 || true
-  _spawn_functions_serve "$supabase_wt"
-  wait_for_control_plane "$api_port"
-}
-
 # Run `supabase db reset --local` inside the supabase worktree, retrying
 # with progressive backoff. `supabase db reset --local` restarts
 # containers to clear PostgREST/edge-runtime caches; Kong can return a
@@ -583,23 +540,6 @@ supabase_db_reset_with_retry() {
     (cd "$supabase_wt" && supabase db reset --local)
   }
   retry_with_backoff 5 "supabase db reset --local" _supabase_db_reset_once
-}
-
-# Restart the Supabase stack (`supabase stop && supabase start`) and
-# wait for the pgflow ControlPlane edge function to respond. Each
-# attempt gives ControlPlane up to 30s (wait_for_control_plane) to come
-# up; up to 3 attempts with progressive backoff to absorb slow Docker
-# warm-up on macOS.
-#
-# Usage: supabase_stack_restart_ready <supabase_wt> <api_port>
-supabase_stack_restart_ready() {
-  local supabase_wt="$1"
-  local api_port="$2"
-  _supabase_stack_restart_ready_once() {
-    (cd "$supabase_wt" && supabase stop >/dev/null 2>&1 && supabase start >/dev/null 2>&1) || return 1
-    wait_for_control_plane "$api_port"
-  }
-  retry_with_backoff 3 "supabase stack restart" _supabase_stack_restart_ready_once
 }
 
 # --- Rollback helpers ---
@@ -763,65 +703,4 @@ unlink_worktree_migrations() {
     (cd "$supabase_wt" && git checkout -f origin/main) 2>&1 | grep -v "^HEAD is now at" || true
     apply_migrations "$supabase_wt"
   fi
-}
-
-# Scaffold a pgflow Deno edge-function worker from templates. Idempotent: if
-# the worker directory already exists, returns without touching it.
-#
-# Usage: scaffold_pgflow_worker <invoking_wt> <supabase_wt> <slug>
-#
-# Expects supabase/flows/<kebab-slug>.ts to exist in the invoking worktree.
-# Templates live under scripts/templates/pgflow-worker/ (next to this file).
-# Pgflow version is pinned to whatever the supabase worktree's ControlPlane
-# function uses (supabase/functions/pgflow/deno.json), falling back to 0.14.1.
-scaffold_pgflow_worker() {
-  local invoking_wt="$1"
-  local supabase_wt="$2"
-  local slug="$3"
-
-  local kebab_slug
-  kebab_slug=$(echo "$slug" | sed 's/\([A-Z]\)/-\1/g' | sed 's/^-//' | tr '[:upper:]' '[:lower:]')
-  local worker_name="${kebab_slug}-worker"
-  local source_file="$invoking_wt/supabase/flows/${kebab_slug}.ts"
-  local worker_dir="$invoking_wt/supabase/functions/$worker_name"
-  local helpers_dir
-  helpers_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  local template_dir="$helpers_dir/templates/pgflow-worker"
-  local pgflow_deno="$supabase_wt/supabase/functions/pgflow/deno.json"
-
-  if [ -d "$worker_dir" ]; then
-    return 0
-  fi
-  if [ ! -f "$source_file" ]; then
-    echo "    (warning: $source_file missing — skipping worker scaffold)"
-    return 0
-  fi
-  if [ ! -d "$template_dir" ]; then
-    echo "    (warning: $template_dir missing — skipping worker scaffold)"
-    return 0
-  fi
-
-  local flow_export
-  flow_export=$(grep -oE 'export const [A-Z][A-Za-z0-9_]* = new Flow' "$source_file" \
-    | head -n1 | awk '{print $3}')
-  if [ -z "$flow_export" ]; then
-    flow_export="$(echo "$slug" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
-    echo "    (note: no 'export const ... = new Flow' found in $(basename "$source_file"); falling back to $flow_export)"
-  fi
-
-  local pgflow_version=""
-  if [ -f "$pgflow_deno" ]; then
-    pgflow_version=$(grep -oE '@pgflow/edge-worker@[^"/]+' "$pgflow_deno" | head -n1 | sed 's|.*@||')
-  fi
-  [ -z "$pgflow_version" ] && pgflow_version="0.14.1"
-
-  mkdir -p "$worker_dir"
-  sed \
-    -e "s|__FLOW_EXPORT__|${flow_export}|g" \
-    -e "s|__KEBAB_SLUG__|${kebab_slug}|g" \
-    "$template_dir/index.ts" > "$worker_dir/index.ts"
-  sed \
-    -e "s|__PGFLOW_VERSION__|${pgflow_version}|g" \
-    "$template_dir/deno.json" > "$worker_dir/deno.json"
-  echo "    Created worker scaffold: supabase/functions/${worker_name}/ (pgflow@${pgflow_version})"
 }
