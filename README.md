@@ -49,7 +49,6 @@ dotfiles/
 │   ├── dev-supabase-migrate.sh
 │   ├── dev-supabase-seed.sh
 │   ├── dev-supabase-reset.sh
-│   ├── dev-supabase-anchor.sh
 │   ├── dev-env.sh                # Env-vars dispatcher
 │   ├── dev-env-add.sh
 │   ├── dev-env-remove.sh
@@ -113,8 +112,7 @@ All commands operate on the shared supabase worktree regardless of which worktre
 | `dev sb sync [--reset]` | Fetch origin/main, update supabase worktree, clean stale symlinks                                                                        |
 | `dev sb migrate`        | Apply pending migrations in the shared worktree                                                                                          |
 | `dev sb seed`           | Apply pending seeds from `supabase/seeds/` (skips `users.sql`; tracked in `supabase_seeds.applied_seeds` — rename a seed to re-apply it) |
-| `dev sb reset`          | Full local reset: `db reset` → apply migrations → seed `users.sql` → apply seeds → background `functions serve`                          |
-| `dev sb anchor`         | Point edge runtime's `COPYMIND_API_HOST` at this worktree's port                                                                         |
+| `dev sb reset`          | Full local reset: `db reset` → apply migrations → seed `users.sql` → apply seeds                                                         |
 
 ### `dev wt` — Worktree
 

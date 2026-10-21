@@ -361,19 +361,6 @@ get_db_port() {
   ' "$supabase_wt/supabase/config.toml"
 }
 
-# Read [api] port from config.toml, falling back to 54321 if the section
-# or value is missing. Mirrors get_db_port's parsing approach.
-get_api_port() {
-  local supabase_wt="$1"
-  local port
-  port=$(awk '
-    /^\[api\]/ { in_api = 1; next }
-    /^\[/ { in_api = 0 }
-    in_api && /^port[[:space:]]*=/ { gsub(/[^0-9]/, ""); print; exit }
-  ' "$supabase_wt/supabase/config.toml")
-  echo "${port:-54321}"
-}
-
 # --- Migration + seed engines ---
 
 # Flatten supabase/migrations/<subdir>/*.sql into a flat dir, run `supabase
@@ -480,48 +467,6 @@ CREATE TABLE IF NOT EXISTS supabase_seeds.applied_seeds (
   done
 
   echo "Seeds complete: $applied applied, $skipped already up to date."
-}
-
-# --- Edge runtime helpers ---
-
-# Spawn `supabase functions serve` in the background, detached from this
-# shell. Internal helper — callers use ensure_functions_serve.
-_spawn_functions_serve() {
-  local supabase_wt="$1"
-  (cd "$supabase_wt" && supabase functions serve) </dev/null >/dev/null 2>&1 &
-  disown 2>/dev/null || true
-}
-
-# Ensure the Supabase edge runtime container + `supabase functions serve`
-# host process are running. The container and the host process can die
-# independently (e.g. `supabase db reset --local` recreates the container
-# but the prior host process is orphaned), so both are checked. Idempotent
-# — only spawns a new functions serve if either side is missing.
-#
-# Used by `dev sb up`, `dev sb reset`.
-ensure_functions_serve() {
-  local supabase_wt="$1"
-  local project_id
-  project_id="$(get_project_id "$supabase_wt")"
-  local container_up=false host_up=false
-  if docker ps --filter "name=supabase_edge_runtime_${project_id}" --format '{{.Names}}' 2>/dev/null | grep -q .; then
-    container_up=true
-  fi
-  if pgrep -f "supabase functions serve" >/dev/null 2>&1; then
-    host_up=true
-  fi
-  if [ "$container_up" = true ] && [ "$host_up" = true ]; then
-    echo "Edge functions already running."
-    return 0
-  fi
-  # If only one side is up, kill whichever is stale and respawn cleanly —
-  # spawning a fresh functions serve alongside a stale container or a stale
-  # host process leaves the stack in a split-brain state.
-  if [ "$host_up" = true ] && [ "$container_up" = false ]; then
-    pkill -f "supabase functions serve" 2>/dev/null || true
-  fi
-  echo "Starting edge functions..."
-  _spawn_functions_serve "$supabase_wt"
 }
 
 # Run `supabase db reset --local` inside the supabase worktree, retrying

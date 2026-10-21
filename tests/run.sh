@@ -39,10 +39,6 @@ cleanup() {
   echo ""
   printf "${DIM}Cleaning up...${RESET}\n"
 
-  # Reap any backgrounded `supabase functions serve` processes started by
-  # `dev sb reset` tests.
-  pkill -f 'supabase functions serve' 2>/dev/null || true
-
   # Stop Supabase if running
   if [ -d "$WORKTREE_BASE/main" ]; then
     (cd "$WORKTREE_BASE/main" && supabase stop --no-backup 2>/dev/null) || true
@@ -112,7 +108,7 @@ git init -q -b main
 git config user.email "test@test.com"
 git config user.name "Test"
 
-mkdir -p supabase/migrations/app supabase/migrations/jobs supabase/seeds supabase/functions/hello src/lib src/types
+mkdir -p supabase/migrations/app supabase/migrations/jobs supabase/seeds src/lib src/types
 
 cat > supabase/config.toml << 'TOML'
 project_id = "test-int"
@@ -147,8 +143,7 @@ enabled = true
 enabled = true
 
 [edge_runtime]
-enabled = true
-policy = "oneshot"
+enabled = false
 
 [analytics]
 enabled = false
@@ -159,11 +154,6 @@ CREATE TABLE IF NOT EXISTS public._test_init (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid()
 );
 SQL
-
-# Minimal edge function so the edge runtime has something to serve.
-cat > supabase/functions/hello/index.ts << 'TS'
-Deno.serve(() => new Response("ok"));
-TS
 
 cat > docker-compose.yml << 'YAML'
 services:

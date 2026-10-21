@@ -113,40 +113,4 @@ else
   echo "No Supabase project detected, skipping."
 fi
 
-# --- COPYMIND_API_HOST for Supabase Edge Functions ---
-# Edge functions run inside Docker (Supabase edge runtime) and need
-# host.docker.internal to reach the app container on the host. The host
-# port comes from the worktree registry (.worktree-ports) — the single
-# source of truth populated by `dev wt init` / `dev wt up`. If the
-# registry or entry is missing we skip with a diagnostic rather than
-# guessing — a silent fallback would paper over a broken setup.
-REGISTRY="$(cd "$WORKTREE_DIR/.." 2>/dev/null && pwd)/.worktree-ports"
-WORKTREE_NAME="$(basename "$WORKTREE_DIR")"
-
-# The shared `supabase` worktree runs the DB stack, not the app — it has no
-# app port and `COPYMIND_API_HOST` is meaningful only on app worktrees.
-if [ "$WORKTREE_NAME" = "supabase" ]; then
-  echo "Skipping COPYMIND_API_HOST (supabase worktree has no app port)."
-else
-  APP_PORT=""
-  if [ -f "$REGISTRY" ]; then
-    APP_PORT="$(awk -F'\t' -v n="$WORKTREE_NAME" '$1 == n {print $2; exit}' "$REGISTRY")"
-  fi
-
-  if [ -z "$APP_PORT" ]; then
-    echo "Warning: Could not determine COPYMIND_API_HOST port." >&2
-    if [ ! -f "$REGISTRY" ]; then
-      echo "  Port registry not found at $REGISTRY" >&2
-      echo "  Fix: run 'dev wt init' from the bare repo to bootstrap the registry." >&2
-    else
-      echo "  No entry for worktree '$WORKTREE_NAME' in $REGISTRY" >&2
-      echo "  Fix: re-create this worktree with 'dev wt up <branch>', or add a row manually." >&2
-    fi
-    echo "  Skipping COPYMIND_API_HOST." >&2
-  else
-    upsert_env "$ENV_FILE" "COPYMIND_API_HOST" "http://host.docker.internal:${APP_PORT}"
-    echo "Set COPYMIND_API_HOST=http://host.docker.internal:${APP_PORT}"
-  fi
-fi
-
 echo "Done: $ENV_FILE"

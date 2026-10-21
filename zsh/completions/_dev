@@ -146,8 +146,7 @@ _dev_supabase() {
     'sync:Fetch origin/main, update the supabase worktree, clean stale symlinks'
     'migrate:Apply pending migrations in the shared worktree'
     'seed:Apply pending seeds from supabase/seeds/'
-    'reset:Full local reset — db reset, migrate, seed, serve functions'
-    'anchor:Point the edge runtime'\''s COPYMIND_API_HOST at this worktree'\''s port'
+    'reset:Full local reset — db reset, migrate, seed'
   )
   if (( CURRENT == 3 )); then
     _describe -t commands 'dev sb command' subcommands

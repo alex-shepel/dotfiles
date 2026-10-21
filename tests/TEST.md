@@ -47,7 +47,7 @@ Single commands tested in dependency order. Each test builds on state from previ
 | 1   | `01-worktree-up-no-supabase`   | `dev wt up` when Supabase is down — hints shown                 |
 | 2   | `02-supabase-up`               | `dev sb up` — creates worktree, starts Supabase, idempotent     |
 | 3   | `03-supabase-status`           | `dev sb status` — shows running status                          |
-| 4   | `04-worktree-env`              | `dev wt env` — Supabase var injection, COPYMIND_API_HOST        |
+| 4   | `04-worktree-env`              | `dev wt env` — Supabase var injection                           |
 | 5   | `05-worktree-up-with-supabase` | `dev wt up` when Supabase is running — auto-injects vars        |
 | 6   | `06-supabase-dispatch`         | `dev sb` dispatcher argument validation for new subcommands     |
 | 7   | `07-worktree-port`             | `dev wt port` — regenerates override from registry, error paths |
@@ -60,5 +60,5 @@ Multi-command developer workflows.
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `01-migration-lifecycle` | link → idempotent → multi-wt → timestamp conflict → unlink → merge-to-main → teardown → cleanup                                                                             |
 | `02-db-migrate-seed`     | `dev sb migrate` + `dev sb seed` — no-op, new file, idempotence, users.sql skip, rename-as-new                                                                              |
-| `03-db-reset`            | `dev sb reset` — wipe + re-migrate + re-seed, functions serve backgrounded, feature-worktree scope                                                                          |
+| `03-db-reset`            | `dev sb reset` — wipe + re-migrate + re-seed, feature-worktree scope                                                                                                               |
 | `04-rollback-lifecycle`  | link lint → unlink reverts via `supabase/rollbacks/` (newest-first) → phantom warning for uncovered → `dev wt down` rollback path → `unlink --reset`                        |

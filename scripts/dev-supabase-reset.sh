@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Full local database reset: wipe, re-migrate, seed users, seed data,
-# and start edge functions in the background. Operates on the shared
-# supabase worktree regardless of invoking cwd.
+# Full local database reset: wipe, re-migrate, seed users, seed data.
+# Operates on the shared supabase worktree regardless of invoking cwd.
 # Usage: dev sb reset
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -36,14 +35,6 @@ fi
 echo ""
 echo "==> Seeding data..."
 do_seed_up "$supabase_wt"
-
-echo ""
-echo "==> Starting edge functions..."
-# `supabase db reset --local` restarts containers, so the edge runtime
-# container is freshly recreated but `supabase functions serve` host
-# process from the previous session is gone. Spawn a new one.
-ensure_functions_serve "$supabase_wt"
-sleep 5
 
 echo ""
 echo "==> Done!"
