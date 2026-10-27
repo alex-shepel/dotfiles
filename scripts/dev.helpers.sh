@@ -9,6 +9,10 @@ GREEN='\033[32m'
 DIM='\033[2m'
 RESET='\033[0m'
 
+# Base host port for `dev wt` worktrees. `main` gets this port and each new
+# worktree takes the next free one, within a 100-port interval.
+WORKTREE_BASE_PORT=3000
+
 # Abort unless invoked from a worktree of a bare-cloned repo. The whole
 # `dev wt`/`dev sb` toolchain assumes that layout (worktrees-as-siblings
 # of the bare .git dir), so the check is shared across worktree + supabase

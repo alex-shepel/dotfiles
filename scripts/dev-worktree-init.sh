@@ -71,23 +71,19 @@ fi
 # --- Initialize port registry ---
 COMPOSE_FILE="$WORKTREE_DIR/docker-compose.yml"
 REGISTRY="$BARE_DIR/.worktree-ports"
+BASE_PORT="$WORKTREE_BASE_PORT"
+printf "# worktree\tport\tcreated\n" >"$REGISTRY"
+printf "%s\t%s\t%s\n" "main" "$BASE_PORT" "$(date +%Y-%m-%d)" >>"$REGISTRY"
+echo "Initialized port registry at $REGISTRY (base port $BASE_PORT)"
 if [ -f "$COMPOSE_FILE" ]; then
-  BASE_PORT=$(sed -n 's/.*- *"\([0-9]*\):.*"/\1/p' "$COMPOSE_FILE" | head -1)
-fi
-if [ -n "${BASE_PORT:-}" ]; then
-  printf "# worktree\tport\tcreated\n" >"$REGISTRY"
-  printf "%s\t%s\t%s\n" "main" "$BASE_PORT" "$(date +%Y-%m-%d)" >>"$REGISTRY"
-  echo "Initialized port registry at $REGISTRY (base port $BASE_PORT)"
   (cd "$WORKTREE_DIR" && "$SCRIPT_DIR/dev-worktree-port.sh")
-else
-  echo "Warning: No host port found in docker-compose.yml — port registry not created." >&2
 fi
 
 echo ""
 echo "=== Init complete ==="
 echo "  Worktree:  $WORKTREE_DIR"
 echo "  Branch:    $DEFAULT_BRANCH"
-[ -n "${BASE_PORT:-}" ] && echo "  Base port: $BASE_PORT"
+echo "  Base port: $BASE_PORT"
 echo ""
 echo "To get started:"
 echo "  cd $WORKTREE_DIR"

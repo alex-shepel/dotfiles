@@ -21,10 +21,15 @@ source "$SCRIPT_DIR/dev.helpers.sh"
 
 require_bare_repo
 
-# --- Must be run from inside an existing worktree ---
+# --- Resolve the source worktree (current one, or main/ when run from the bare root) ---
 if ! CURRENT_WORKTREE="$(git rev-parse --show-toplevel 2>/dev/null)"; then
-  echo "Error: No worktree found. Run 'dev wt init' first to bootstrap the repo." >&2
-  exit 1
+  BARE_MAIN="$(cd "$(git rev-parse --git-common-dir)" && pwd)/main"
+  if [ -d "$BARE_MAIN" ]; then
+    CURRENT_WORKTREE="$BARE_MAIN"
+  else
+    echo "Error: No worktree found. Run 'dev wt init' first to bootstrap the repo." >&2
+    exit 1
+  fi
 fi
 PARENT_DIR="$(cd "$CURRENT_WORKTREE/.." && pwd)"
 REPO_NAME="$(basename "$PARENT_DIR" | sed 's/\.git$//')"
@@ -41,15 +46,8 @@ if [ -d "$NEW_WORKTREE_DIR" ]; then
   exit 1
 fi
 
-# --- Read base port from docker-compose.yml ---
 COMPOSE_FILE="$CURRENT_WORKTREE/docker-compose.yml"
-if [ -f "$COMPOSE_FILE" ]; then
-  BASE_PORT=$(sed -n 's/.*- *"\([0-9]*\):.*"/\1/p' "$COMPOSE_FILE" | head -1)
-fi
-if [ -z "${BASE_PORT:-}" ]; then
-  echo "Error: Could not read host port from $COMPOSE_FILE" >&2
-  exit 1
-fi
+BASE_PORT="$WORKTREE_BASE_PORT"
 
 # --- Registry must exist (created by 'dev wt init') ---
 if [ ! -f "$REGISTRY" ]; then
@@ -105,7 +103,9 @@ printf "%s\t%s\t%s\n" "$SAFE_NAME" "$NEW_PORT" "$(date +%Y-%m-%d)" >>"$REGISTRY"
 echo "Registered in $REGISTRY"
 
 # --- Generate docker-compose.override.yml from the registry ---
-(cd "$NEW_WORKTREE_DIR" && "$SCRIPT_DIR/dev-worktree-port.sh")
+if [ -f "$COMPOSE_FILE" ]; then
+  (cd "$NEW_WORKTREE_DIR" && "$SCRIPT_DIR/dev-worktree-port.sh")
+fi
 
 # --- Install dependencies ---
 echo "Installing dependencies..."
@@ -121,8 +121,10 @@ elif [ -f "pnpm-lock.yaml" ]; then
 fi
 
 # --- Build Docker image ---
-echo "Building Docker image..."
-docker compose build
+if [ -f "$COMPOSE_FILE" ]; then
+  echo "Building Docker image..."
+  docker compose build
+fi
 
 # --- Inject Supabase env vars if running ---
 HAS_SUPABASE=false
@@ -149,4 +151,6 @@ if [ "$HAS_SUPABASE" = true ] && [ "$SUPABASE_INJECTED" = false ]; then
   echo "  dev sb up              # start Supabase (if not running)"
   echo "  dev wt env             # pick up Supabase keys into .env.local"
 fi
-echo "  docker compose up"
+if [ -f "$COMPOSE_FILE" ]; then
+  echo "  docker compose up"
+fi

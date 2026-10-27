@@ -161,7 +161,7 @@ services:
     image: alpine:latest
     command: ["sleep", "infinity"]
     ports:
-      - "13000:3000"
+      - "3000:3000"
 YAML
 
 cat > src/lib/env.ts << 'TS'

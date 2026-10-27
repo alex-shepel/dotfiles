@@ -13,7 +13,7 @@ header "regenerates override from registry"
 rm -f "$OVERRIDE"
 (cd "$MAIN_DIR" && "$SCRIPTS_DIR/dev-worktree-port.sh") >/dev/null
 assert_file_exists "override.yml regenerated" "$OVERRIDE"
-assert_contains "override maps main's port" "13000:3000" "$(cat "$OVERRIDE")"
+assert_contains "override maps main's port" "3000:3000" "$(cat "$OVERRIDE")"
 assert_contains "override sets container_name" "container_name:" "$(cat "$OVERRIDE")"
 
 header "idempotent"
