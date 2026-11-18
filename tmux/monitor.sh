@@ -735,7 +735,7 @@ monitor_acc_order() {
 
 # Fills the X_* arrays for every session, and the ACC_* table behind them.
 monitor_read_exports() {
-  local i n=${#SESSIONS[@]} now base acck subc=0 apic=0 overc=0 allc=0
+  local i n=${#SESSIONS[@]} now base acck subc=0 apic=0 overc=0 allc=0 costf
   local seen_sub="" seen_api="" seen_any=""
   X_STATE=(); X_DETAIL=(); X_CTX=(); X_COST=(); X_COSTF=(); X_AGENTS=()
   X_ACCT=()
@@ -813,7 +813,10 @@ monitor_read_exports() {
           monitor_cents "$KV_COST"
           # Rounded here rather than in the draw: the draw reruns on every
           # keystroke and the arithmetic would be repeated for nothing.
-          printf -v X_COSTF[$i] '$%d.%02d' $((CENTS / 100)) $((CENTS % 100))
+          # Through a scalar: bash 3.2 (macOS /bin/bash) rejects an array
+          # element as the target of printf -v.
+          printf -v costf '$%d.%02d' $((CENTS / 100)) $((CENTS % 100))
+          X_COSTF[$i]=$costf
           allc=$((allc + CENTS)); seen_any=1
           case $KV_SUB in
             1) subc=$((subc + CENTS)); seen_sub=1 ;;
