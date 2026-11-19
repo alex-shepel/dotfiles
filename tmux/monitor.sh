@@ -152,9 +152,15 @@ monitor_snapshot() {
   local raw=()
   SESSIONS=(); P_PANE=(); P_CMD=(); P_CX=(); P_CY=(); P_TITLE=(); P_RANK=()
 
-  while IFS= read -r line; do raw+=("$line"); done \
-    < <(tmux list-panes -a -F "$SNAP_FMT" 2>/dev/null)
-  [ ${#raw[@]} -gt 0 ] || return 0
+  # Here-strings, never `< <(...)`, throughout this file: bash 3.2 (macOS
+  # /bin/bash) keeps a process substitution's pipe open until the top-level
+  # command ends, and the monitor's main loop never ends. At about a dozen a
+  # tick it ran out of descriptors in under a minute and lost its stdin, and
+  # with it the keys and the terminal size.
+  local out
+  out=$(tmux list-panes -a -F "$SNAP_FMT" 2>/dev/null)
+  [ -n "$out" ] || return 0
+  while IFS= read -r line; do raw+=("$line"); done <<< "$out"
 
   # Session list first, alphabetical and filtered, so rows keep a stable order
   # and the jump keys stay put between ticks.
@@ -162,11 +168,11 @@ monitor_snapshot() {
     [ -n "$sess" ] || continue
     SESSIONS+=("$sess"); P_PANE+=(""); P_CMD+=(""); P_CX+=(0); P_CY+=(0)
     P_TITLE+=(""); P_RANK+=(-1)
-  done < <(printf '%s\n' "${raw[@]}" |
+  done <<< "$(printf '%s\n' "${raw[@]}" |
              cut -d"$SNAP_SEP" -f2 |
              sort -u |
              grep -vx "$MON" |
-             { if [ -n "$MONITOR_FILTER" ]; then grep -E "$MONITOR_FILTER"; else cat; fi })
+             { if [ -n "$MONITOR_FILTER" ]; then grep -E "$MONITOR_FILTER"; else cat; fi })"
 
   n=${#SESSIONS[@]}
   [ "$n" -gt 0 ] || return 0
@@ -225,12 +231,12 @@ monitor_busy_titles() {
     done
     while IFS= read -r i; do
       [ -n "$i" ] && P_BUSY[$i]=1
-    done < <(printf '%s' "$feed" | perl -CSD -ne '
+    done <<< "$(printf '%s' "$feed" | perl -CSD -ne '
                chomp;
                my ($i, $t) = split(/\t/, $_, 2);
                next unless defined $t && length $t;
                my $c = ord(substr($t, 0, 1));
-               print "$i\n" if $c >= 0x2800 && $c <= 0x28FF;')
+               print "$i\n" if $c >= 0x2800 && $c <= 0x28FF;')"
     return 0
   fi
 
@@ -1690,11 +1696,16 @@ NBSP=$'\302\240'
 # sequences. Indexing matters: capture-pane emits every row from the top of the
 # screen, blanks included, so LINES[cursor_y] is the row the cursor is on.
 monitor_read_pane() {
-  local line
+  local line out
   LINES=(); L_N=0
   [ -n "${1:-}" ] || return 1
-  while IFS= read -r line; do LINES+=("$line"); done \
-    < <(tmux capture-pane -p -t "$1" 2>/dev/null)
+  # The x keeps $(...) from eating the blank rows at the bottom, which count
+  # (see above); the here-string then adds back the one newline taken off here.
+  out=$(tmux capture-pane -p -t "$1" 2>/dev/null; printf x)
+  out=${out%x}
+  [ -n "$out" ] || return 1
+  out=${out%$'\n'}
+  while IFS= read -r line; do LINES+=("$line"); done <<< "$out"
   L_N=${#LINES[@]}
   [ "$L_N" -gt 0 ]
 }
